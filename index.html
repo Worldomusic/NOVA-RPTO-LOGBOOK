@@ -745,14 +745,16 @@
   /* ================= FIREBASE (Google Sign-In + Firestore backend) =================
      Paste the config object from Firebase console > Project settings > Your apps.
      See the setup comment near the top of the file for the full walkthrough. */
-  const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyB8xYJ-lGlKLYAH0AuuG-siLBW7CFYcIZl4",
-    authDomain: "nova-rpto-logbook.firebaseapp.com",
-    projectId: "nova-rpto-logbook",
-    storageBucket: "nova-rpto-logbook.firebasestorage.app",
-    messagingSenderId: "342847452213",
-    appId: "1:342847452213:web:93118e2d37dc1e111bad7c"
-  };
+ // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyB8xYJ-lGlKYAH0AuuG-siLBW7CFYcIZl4",
+  authDomain: "nova-rpto-logbook.firebaseapp.com",
+  projectId: "nova-rpto-logbook",
+  storageBucket: "nova-rpto-logbook.firebasestorage.app",
+  messagingSenderId: "342847452213",
+  appId: "1:342847452213:web:93118e2d37dc1e111bad7c",
+  measurementId: "G-770FXPNZZV"
+};
 
   let firebaseReady = false;
   let auth = null, db = null, googleProvider = null;
