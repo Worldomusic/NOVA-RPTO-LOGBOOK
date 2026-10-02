@@ -795,7 +795,7 @@
   /* ================= FIREBASE (Google Sign-In + Firestore backend) =================
      Paste the config object from Firebase console > Project settings > Your apps.
      See the setup comment near the top of the file for the full walkthrough. */
-const firebaseConfig = {
+const FIREBASE_CONFIG = {
   apiKey: "AIzaSyB8xYJ-lGlKYAH0AuuG-siLBW7CFYcIZl4",
   authDomain: "nova-rpto-logbook.firebaseapp.com",
   projectId: "nova-rpto-logbook",
@@ -804,10 +804,9 @@ const firebaseConfig = {
   appId: "1:342847452213:web:93118e2d37dc1e111bad7c",
   measurementId: "G-770FXPNZZV"
 };
-  // Google account(s) that see the "Monitor" tab (everyone's batches).
-  const ADMIN_EMAILS = ["abishekachu16@gmail.com"];
-  const isAdmin = () => currentUser && ADMIN_EMAILS.includes(currentUser.email);
-
+// Google account(s) that see the "Monitor" tab (everyone's batches).
+const ADMIN_EMAILS = ["abishekachu16@gmail.com"];
+const isAdmin = () => currentUser && ADMIN_EMAILS.includes(currentUser.email);
   let firebaseReady = false;
   let auth = null, db = null, googleProvider = null;
   let currentUser = null;
