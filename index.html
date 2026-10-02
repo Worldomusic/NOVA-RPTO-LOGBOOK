@@ -197,6 +197,12 @@
   #mainAppContainer { display: none; }
 
   /* ---------- LIVE CLOCK (sits inline beside the title box) ---------- */
+  .clocks-row {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
   .live-clock {
     background: var(--panel-inset);
     border: 1px solid var(--line-bright);
@@ -207,8 +213,8 @@
     font-family: var(--font-mono);
     line-height: 1.2;
     flex-shrink: 0;
-    margin-left: auto;
   }
+  .live-clock .clock-ampm { font-size: 0.6rem; color: var(--ink-soft); margin-left: 3px; }
   .live-clock .clock-time {
     font-size: 1.1rem;
     font-weight: 700;
@@ -569,9 +575,15 @@
       <h1>NOVA AEROSPACE PRIVATE LIMITED</h1>
       <p>RPTO flight &amp; simulator telemetry log</p>
     </div>
-    <div class="live-clock" id="liveClock">
-      <div class="clock-time"><span id="clockHM">--:--</span>:<span class="sec" id="clockSec">--</span></div>
-      <div class="clock-date" id="clockDate">-- --- ----</div>
+    <div class="clocks-row">
+      <div class="live-clock" id="liveClock">
+        <div class="clock-time"><span id="clockHM">--:--</span>:<span class="sec" id="clockSec">--</span><span class="clock-ampm" id="clockAMPM">--</span></div>
+        <div class="clock-date" id="clockDate">-- --- ----</div>
+      </div>
+      <div class="live-clock" id="liveClockUtc">
+        <div class="clock-time" style="color: var(--solo);"><span id="clockHMUtc">--:--</span>:<span class="sec" id="clockSecUtc">--</span><span class="clock-ampm" id="clockAMPMUtc">--</span></div>
+        <div class="clock-date" id="clockDateUtc">UTC</div>
+      </div>
     </div>
   </div>
 
@@ -1093,12 +1105,18 @@ const FIREBASE_CONFIG = {
   ];
 
   const simSyllabus = [
-    { ex: "SIM 01", name: "Simulator Familiarization & Pre-Checks", targetMins: 30 },
-    { ex: "SIM 02", name: "Basic Hovering, Pitch, Roll & Throttle", targetMins: 45 },
-    { ex: "SIM 03", name: "Level Turns & Coordinated Circles", targetMins: 45 },
-    { ex: "SIM 04", name: "Rectangle Circuit Patterns", targetMins: 45 },
-    { ex: "SIM 05", name: "Figure-of-8 Precision Practice", targetMins: 45 },
-    { ex: "SIM 06", name: "Emergency, Fail-safe & RTH Maneuvers", targetMins: 50 }
+    { ex: "SIM EXERCISE 1", name: "Introduction to flight simulator", targetMins: 15 },
+    { ex: "SIM EXERCISE 2", name: "Sim familiarization, Controls check", targetMins: 15 },
+    { ex: "SIM EXERCISE 3", name: "Pre-flight checks, Take off, Cruise", targetMins: 15 },
+    { ex: "SIM EXERCISE 4", name: "Approach. Go-around & Landing, Post-Flight Checks", targetMins: 15 },
+    { ex: "SIM EXERCISE 5", name: "Cruise and Turns, Climbing and Climbing Turns", targetMins: 15 },
+    { ex: "SIM EXERCISE 6", name: "Descend & Descending Turns", targetMins: 15 },
+    { ex: "SIM EXERCISE 7", name: "Disorientation & Recovery", targetMins: 15 },
+    { ex: "SIM EXERCISE 8", name: "Circuit Flying \u2013 Rectangle/Square/Circle/Orbit, Flying", targetMins: 15 },
+    { ex: "SIM EXERCISE 9", name: "Gimble Controls (Pan, tilt & zoom)", targetMins: 15 },
+    { ex: "SIM EXERCISE 10", name: "Night Flying", targetMins: 15 },
+    { ex: "SIM EXERCISE 11", name: "Abnormal/Emergency Procedures", targetMins: 15 },
+    { ex: "SIMULATOR TEST", name: "Simulator Test", targetMins: 30 }
   ];
 
   let currentIdx = 0;
@@ -1123,7 +1141,10 @@ const FIREBASE_CONFIG = {
     let opts = '<option value="">HH</option>';
     for (let h = 0; h < 24; h++) {
       const v = String(h).padStart(2, '0');
-      opts += `<option value="${v}">${v}</option>`;
+      const period = h < 12 ? 'AM' : 'PM';
+      let h12 = h % 12;
+      if (h12 === 0) h12 = 12;
+      opts += `<option value="${v}">${h12} ${period}</option>`;
     }
     return opts;
   }
@@ -1487,8 +1508,15 @@ const FIREBASE_CONFIG = {
     students[currentIdx].roll = document.getElementById("studRoll").value;
   }
 
+  function ensureSimLength(s) {
+    while (s.sim.length < simSyllabus.length) {
+      s.sim.push({ inst: 'I1', lab: 'L1', date: '', sh: '', sm: '', eh: '', em: '' });
+    }
+  }
+
   function loadStudent(idx) {
     const s = students[idx];
+    ensureSimLength(s);
     document.getElementById("studName").value = s.name;
     document.getElementById("studRoll").value = s.roll;
 
@@ -1645,6 +1673,7 @@ const FIREBASE_CONFIG = {
 
   function exportTrueExcel() {
     saveCurrentStudent();
+    students.forEach(ensureSimLength);
     const batch = document.getElementById("batchId")?.value || "Batch 01";
     const cat = document.getElementById("uasCategory")?.value || "Small";
     const uCode = (cat === "Small") ? "S" : "M";
@@ -1794,6 +1823,7 @@ const FIREBASE_CONFIG = {
 
   function exportStandardCSV() {
     saveCurrentStudent();
+    students.forEach(ensureSimLength);
     const batch = document.getElementById("batchId")?.value || "Batch 01";
     const cat = document.getElementById("uasCategory")?.value || "Small";
     const uCode = (cat === "Small") ? "S" : "M";
@@ -1909,20 +1939,40 @@ const FIREBASE_CONFIG = {
     }
   }
 
-  // Live HH:MM:SS + date clock, visible throughout the log page.
+  // Live HH:MM:SS clock, visible throughout the log page — IST in 12-hour
+  // AM/PM format, plus a second live UTC clock widget next to it.
   function tickClock() {
     const now = new Date();
-    const hh = String(now.getHours()).padStart(2, "0");
+
+    let h12 = now.getHours() % 12;
+    if (h12 === 0) h12 = 12;
+    const period = now.getHours() < 12 ? "AM" : "PM";
+    const hh = String(h12).padStart(2, "0");
     const mm = String(now.getMinutes()).padStart(2, "0");
     const ss = String(now.getSeconds()).padStart(2, "0");
     const hmEl = document.getElementById("clockHM");
     const secEl = document.getElementById("clockSec");
+    const ampmEl = document.getElementById("clockAMPM");
     const dateEl = document.getElementById("clockDate");
     if (hmEl) hmEl.textContent = `${hh}:${mm}`;
     if (secEl) secEl.textContent = ss;
+    if (ampmEl) ampmEl.textContent = period;
     if (dateEl) {
       dateEl.textContent = now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
     }
+
+    let uh12 = now.getUTCHours() % 12;
+    if (uh12 === 0) uh12 = 12;
+    const uPeriod = now.getUTCHours() < 12 ? "AM" : "PM";
+    const uhh = String(uh12).padStart(2, "0");
+    const umm = String(now.getUTCMinutes()).padStart(2, "0");
+    const uss = String(now.getUTCSeconds()).padStart(2, "0");
+    const hmUtcEl = document.getElementById("clockHMUtc");
+    const secUtcEl = document.getElementById("clockSecUtc");
+    const ampmUtcEl = document.getElementById("clockAMPMUtc");
+    if (hmUtcEl) hmUtcEl.textContent = `${uhh}:${umm}`;
+    if (secUtcEl) secUtcEl.textContent = uss;
+    if (ampmUtcEl) ampmUtcEl.textContent = uPeriod;
   }
   tickClock();
   setInterval(tickClock, 1000);
